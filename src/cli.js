@@ -44,7 +44,7 @@ function box(lines, width = 58) {
 
 program
     .name('claude-unapi')
-    .description('Unofficial Claude Pro API — use your subscription in code')
+    .description('Unofficial Claude Pro API — use your subscription in any project')
     .version('1.2.0')
     .addHelpText('after', `
 Examples:
@@ -52,7 +52,7 @@ Examples:
   $ claude-unapi ask "Hello Claude"       Quick question
   $ claude-unapi ask "Explain this" --file code.py --model haiku
   $ claude-unapi chat                     Interactive chat
-  $ claude-unapi chat --model opus
+  $ claude-unapi chat --model opus        Chat with a specific model
   $ claude-unapi models                   List available models
   $ claude-unapi config                   Show current configuration
 `);
@@ -67,83 +67,83 @@ program
             '---',
             '',
             '  This tool lets you use your Claude Pro subscription',
-            '  in code without paying for the official API.',
+            '  in any project or script.',
             '',
         ]);
 
         const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
-        // ── Step 1: Detect existing token ──
+        // Step 1: Detect existing token
         let existingToken = null;
         try { existingToken = getSessionKey(); } catch { }
 
         if (existingToken) {
             const masked = existingToken.substring(0, 18) + '...' + existingToken.slice(-4);
             const type = existingToken.startsWith('sk-ant-oat01-') ? 'OAuth (claude setup-token)' : 'Session cookie';
-            console.log(`\n✅ Znaleziono zapisany token [${type}]: ${masked}`);
-            const reuse = await ask(rl, '   Użyć istniejącego tokena? (T/n): ');
+            console.log(`\n✅ Existing token found [${type}]: ${masked}`);
+            const reuse = await ask(rl, '   Use existing token? (Y/n): ');
             if (reuse.trim().toLowerCase() !== 'n') {
-                console.log('\n🔄 Testuję połączenie...');
+                console.log('\n🔄 Testing connection...');
                 try {
                     const claude = new ClaudeClient();
                     await claude.sendMessage('Reply with one word: working');
-                    console.log('✅ Połączenie działa!\n');
+                    console.log('✅ Connection successful!\n');
                     await _setupFinish(rl);
                     rl.close();
                     return;
                 } catch (err) {
-                    console.log('❌ Token nie działa. Trzeba ustawić nowy.\n');
+                    console.log('❌ Token is not working. Please set a new one.\n');
                 }
             }
         }
 
-        // ── Step 2: Choose token method ──
-        console.log('\n📋 Jak chcesz się zalogować?\n');
-        console.log('  [1] claude setup-token  (ZALECANE — OAuth, ważny 1 rok)');
-        console.log('  [2] Session cookie z przeglądarki (claude.ai)');
-        console.log('  [3] Wklej token ręcznie\n');
-        const choice = await ask(rl, 'Wybierz opcję [1/2/3]: ');
+        // Step 2: Choose token method
+        console.log('\n📋 How would you like to authenticate?\n');
+        console.log('  [1] claude setup-token  (RECOMMENDED — OAuth, valid for 1 year)');
+        console.log('  [2] Session cookie from browser (claude.ai)');
+        console.log('  [3] Paste token manually\n');
+        const choice = await ask(rl, 'Choose option [1/2/3]: ');
 
         if (choice.trim() === '1') {
             console.log('\n──────────────────────────────────────────────────────');
-            console.log('  Uruchom w NOWYM oknie terminala:');
+            console.log('  Run in a NEW terminal window:');
             console.log('\n    claude setup-token\n');
-            console.log('  Skopiuj token (zaczyna się od sk-ant-oat01-)');
+            console.log('  Copy the generated token (starts with sk-ant-oat01-)');
             console.log('──────────────────────────────────────────────────────\n');
         } else if (choice.trim() === '2') {
             console.log('\n──────────────────────────────────────────────────────');
-            console.log('  1. Otwórz https://claude.ai (zaloguj się)');
+            console.log('  1. Open https://claude.ai (log in)');
             console.log('  2. F12 → Application/Storage → Cookies → claude.ai');
-            console.log('  3. Znajdź: sessionKey  (sk-ant-sid01-...)');
+            console.log('  3. Find: sessionKey  (sk-ant-sid01-...)');
             console.log('──────────────────────────────────────────────────────\n');
         }
 
-        const token = await ask(rl, '🔑 Wklej token: ');
+        const token = await ask(rl, '🔑 Paste your token: ');
         const trimmed = token.trim();
 
         if (!trimmed) {
-            console.error('❌ Nie podano tokena. Uruchom setup ponownie.');
+            console.error('❌ No token provided. Run setup again.');
             rl.close();
             return;
         }
 
         if (!trimmed.startsWith('sk-ant-oat01-') && !trimmed.startsWith('sk-ant-sid01-')) {
-            console.warn('⚠️  Token wygląda nieprawidłowo. Próbuję mimo to...');
+            console.warn('⚠️  Token looks unusual. Proceeding anyway...');
         }
 
         saveSessionKey(trimmed);
         const tokenType = trimmed.startsWith('sk-ant-oat01-') ? 'OAuth' : 'Session cookie';
-        console.log(`\n✅ Token [${tokenType}] zapisany!`);
+        console.log(`\n✅ Token [${tokenType}] saved!`);
 
-        // ── Step 3: Test connection ──
-        console.log('\n🔄 Testuję połączenie z Claude...');
+        // Step 3: Test connection
+        console.log('\n🔄 Testing connection to Claude...');
         try {
             const claude = new ClaudeClient();
             const res = await claude.sendMessage('Reply with one word: working');
-            console.log(`✅ Połączenie działa! (odpowiedź: "${res.trim()}")`);
+            console.log(`✅ Connection successful! (response: "${res.trim()}")`);
         } catch (err) {
-            console.error('❌ Błąd połączenia:', err.response?.data?.error?.message || err.message);
-            console.log('\n💡 Sprawdź token i spróbuj ponownie: claude-unapi setup');
+            console.error('❌ Connection failed:', err.response?.data?.error?.message || err.message);
+            console.log('\n💡 Check your token and try again: claude-unapi setup');
             rl.close();
             return;
         }
@@ -154,18 +154,18 @@ program
 
 async function _setupFinish(rl) {
     console.log('\n' + hr('─') + '\n');
-    const model = await ask(rl, `🤖 Domyślny model? [Enter = sonnet / opus / haiku]: `);
+    const model = await ask(rl, `🤖 Default model? [Enter = sonnet / opus / haiku]: `);
     const resolved = model.trim() ? resolveModel(model.trim()) : DEFAULT_MODEL;
     writeConfig({ defaultModel: resolved });
-    console.log(`   Default model ustawiony: ${resolved}`);
+    console.log(`   Default model set: ${resolved}`);
 
     console.log('\n' + hr('─'));
-    console.log('\n🎉 Setup zakończony! Możesz teraz używać:\n');
-    console.log('   claude-unapi ask "Napisz funkcję..."');
+    console.log('\n🎉 Setup complete! You can now use:\n');
+    console.log('   claude-unapi ask "Write a function..."');
     console.log('   claude-unapi chat');
     console.log('   claude-unapi --help\n');
 
-    const showPath = await ask(rl, '📖 Pokaż instrukcję użycia w projektach? (T/n): ');
+    const showPath = await ask(rl, '📖 Show usage instructions for projects? (Y/n): ');
     if (showPath.trim().toLowerCase() !== 'n') {
         _showUsageInstructions();
     }
@@ -174,24 +174,23 @@ async function _setupFinish(rl) {
 function _showUsageInstructions() {
     const pkgPath = path.join(__dirname, '..').replace(/\\/g, '/');
     console.log('\n' + hr('─'));
-    console.log('\n📦 Jak używać w swoich projektach:\n');
-    console.log('  Option A: Lokalna zależność (package.json)');
+    console.log('\n📦 How to use in your projects:\n');
+    console.log('  Option A: GitHub dependency (recommended)');
     console.log('  ─────────────────────────────────────────');
-    console.log('  Dodaj do package.json twojego projektu:');
-    console.log(`\n    "dependencies": { "claude-unapi": "file:${pkgPath}" }`);
-    console.log('\n  Potem: npm install\n');
-    console.log('  Option B: Ścieżka bezpośrednia w require()');
+    console.log('  npm install github:Wisnia9600/claude-unapi\n');
+    console.log('  Option B: Local dependency (package.json)');
     console.log('  ─────────────────────────────────────────');
-    console.log(`  const Claude = require('${pkgPath}');\n`);
-    console.log('  Przykład użycia:');
-    console.log('  ────────────────');
+    console.log(`  "dependencies": { "claude-unapi": "file:${pkgPath}" }`);
+    console.log('  Then: npm install\n');
+    console.log('  Usage:');
+    console.log('  ──────');
     console.log("  const Claude = require('claude-unapi');");
     console.log("  const claude = new Claude({ model: 'sonnet' });");
-    console.log("  const res = await claude.sendMessage('Hej!');");
-    console.log("  // streaming:");
+    console.log("  const res = await claude.sendMessage('Hey!');");
+    console.log("  // Streaming:");
     console.log("  await claude.streamMessage('...', chunk => process.stdout.write(chunk));");
-    console.log("  // z plikiem:");
-    console.log("  await claude.sendMessage('Przeanalizuj', { files: ['./kod.py'] });\n");
+    console.log("  // With file:");
+    console.log("  await claude.sendMessage('Analyze this', { files: ['./code.py'] });\n");
 }
 
 // ─── set-key ──────────────────────────────────────────────────────────────────
@@ -213,12 +212,12 @@ program
     .description('View or edit configuration')
     .option('--set-model <model>', 'Set default model')
     .option('--set-max-tokens <n>', 'Set default max tokens')
-    .option('--show-key', 'Show full token (not masked)')
+    .option('--show-key', 'Show full token (unmasked)')
     .option('--reset', 'Reset all config to defaults')
     .action(async (options) => {
         if (options.reset) {
             fs.writeFileSync(getConfigPath(), JSON.stringify({}, null, 2));
-            console.log('✅ Config zresetowany.');
+            console.log('✅ Config reset to defaults.');
             return;
         }
 
@@ -228,7 +227,7 @@ program
         if (options.setModel) {
             const m = resolveModel(options.setModel);
             writeConfig({ defaultModel: m });
-            console.log(`✅ Domyślny model: ${m}`);
+            console.log(`✅ Default model: ${m}`);
             changed = true;
         }
         if (options.setMaxTokens) {
@@ -238,31 +237,30 @@ program
         }
         if (changed) return;
 
-        // Show config
-        console.log('\n📋 Konfiguracja claude-unapi\n');
-        console.log(`  Plik:        ${getConfigPath()}`);
+        console.log('\n📋 claude-unapi configuration\n');
+        console.log(`  Config file:  ${getConfigPath()}`);
 
         try {
             const key = getSessionKey();
             if (options.showKey) {
-                console.log(`  Token:       ${key}`);
+                console.log(`  Token:        ${key}`);
             } else {
                 const masked = key.substring(0, 18) + '...' + key.slice(-4);
                 const type = key.startsWith('sk-ant-oat01-') ? 'OAuth' : 'Cookie';
-                console.log(`  Token:       ${masked} [${type}]`);
+                console.log(`  Token:        ${masked} [${type}]`);
             }
         } catch {
-            console.log('  Token:       ❌ nie ustawiony');
+            console.log('  Token:        ❌ not set — run: claude-unapi setup');
         }
 
         const freshCfg = readConfig();
-        console.log(`  Model:       ${freshCfg.defaultModel || DEFAULT_MODEL}`);
-        console.log(`  Max tokens:  ${freshCfg.maxTokens || 8096}`);
-        console.log(`  Node:        ${process.version}`);
-        console.log(`  Platform:    ${process.platform} (${os.arch()})`);
-        console.log(`  Config dir:  ${path.dirname(getConfigPath())}`);
+        console.log(`  Model:        ${freshCfg.defaultModel || DEFAULT_MODEL}`);
+        console.log(`  Max tokens:   ${freshCfg.maxTokens || 8096}`);
+        console.log(`  Node:         ${process.version}`);
+        console.log(`  Platform:     ${process.platform} (${os.arch()})`);
+        console.log(`  Config dir:   ${path.dirname(getConfigPath())}`);
         console.log();
-        console.log('  Opcje: --set-model <opus|sonnet|haiku>  --set-max-tokens <n>  --reset');
+        console.log('  Options: --set-model <opus|sonnet|haiku>  --set-max-tokens <n>  --reset');
         console.log();
     });
 
@@ -274,24 +272,24 @@ program
         const cfg = readConfig();
         const currentDefault = cfg.defaultModel || DEFAULT_MODEL;
 
-        console.log('\n📋 Dostępne modele Claude:\n');
+        console.log('\n📋 Available Claude models:\n');
         const groups = [
-            { label: 'Opus  (najmocniejszy)', models: ['claude-opus-4-6', 'claude-opus-4-5-20251101', 'claude-opus-4-1-20250805'] },
-            { label: 'Sonnet (balans)', models: ['claude-sonnet-4-6', 'claude-sonnet-4-5', 'claude-sonnet-4'] },
-            { label: 'Haiku  (najszybszy)', models: ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'] },
+            { label: 'Opus   (most capable)', models: ['claude-opus-4-6', 'claude-opus-4-5-20251101', 'claude-opus-4-1-20250805'] },
+            { label: 'Sonnet (balanced)', models: ['claude-sonnet-4-6', 'claude-sonnet-4-5', 'claude-sonnet-4'] },
+            { label: 'Haiku  (fastest/cheapest)', models: ['claude-haiku-4-5-20251001', 'claude-3-5-haiku-20241022'] },
         ];
         for (const g of groups) {
             console.log(`  ${g.label}`);
             for (const m of g.models) {
-                const def = m === currentDefault ? ' ← domyślny' : '';
+                const def = m === currentDefault ? ' ← default' : '';
                 console.log(`    ${m}${def}`);
             }
         }
-        console.log('\n  Aliasy (krótkie):');
+        console.log('\n  Aliases:');
         console.log('    opus    →  claude-opus-4-6');
         console.log('    sonnet  →  claude-sonnet-4-6');
         console.log('    haiku   →  claude-haiku-4-5-20251001');
-        console.log('\n  Zmień domyślny:');
+        console.log('\n  Change default:');
         console.log('    claude-unapi config --set-model haiku\n');
     });
 
@@ -305,15 +303,15 @@ program
             const cfg = readConfig();
             const modelArg = options.model || cfg.defaultModel || DEFAULT_MODEL;
             const modelName = resolveModel(modelArg);
-            console.log(`🔄 Testuję połączenie z Claude (${modelName})...`);
+            console.log(`🔄 Testing connection to Claude (${modelName})...`);
             const claude = new ClaudeClient({ model: modelArg });
             const response = await claude.sendMessage('Reply with one word: working');
-            console.log(`✅ Połączenie działa! Odpowiedź: "${response.trim()}"`);
+            console.log(`✅ Connection successful! Response: "${response.trim()}"`);
         } catch (err) {
-            console.error('❌ Błąd:', err.response?.data?.error?.message || err.message);
+            console.error('❌ Error:', err.response?.data?.error?.message || err.message);
             if (err.response?.status === 401 || err.response?.status === 403) {
-                console.error('\n💡 Token wygasł lub jest nieprawidłowy.');
-                console.error('   Uruchom: claude-unapi setup');
+                console.error('\n💡 Token is invalid or expired.');
+                console.error('   Run: claude-unapi setup');
             }
         }
     });
@@ -335,7 +333,7 @@ program
             const files = options.file || [];
 
             if (files.length) {
-                console.log(`📎 Pliki: ${files.map(f => path.basename(f)).join(', ')}`);
+                console.log(`📎 Files: ${files.map(f => path.basename(f)).join(', ')}`);
             }
 
             if (options.stream !== false) {
@@ -346,7 +344,7 @@ program
                 console.log(res);
             }
         } catch (err) {
-            console.error('❌ Błąd:', err.response?.data?.error?.message || err.message);
+            console.error('❌ Error:', err.response?.data?.error?.message || err.message);
         }
     });
 
@@ -378,27 +376,27 @@ program
                 claude.newConversation();
             }
         } catch (err) {
-            console.error('❌ Błąd inicjalizacji:', err.response?.data?.error?.message || err.message);
-            console.error('   Uruchom: claude-unapi setup');
+            console.error('❌ Init error:', err.response?.data?.error?.message || err.message);
+            console.error('   Run: claude-unapi setup');
             process.exit(1);
         }
 
         box([
             `  🤖 Claude Chat — ${currentModel}  `,
             '---',
-            '  /new          Nowa konwersacja (reset kontekstu)',
-            '  /model <name> Zmień model w trakcie',
-            '  /model?       Pokaż aktualny model',
-            '  /file <path>  Wyślij plik z następną wiadomością',
-            '  /help         Pokaż komendy',
-            '  /exit         Wyjdź',
+            '  /new          Start new conversation (clears context)',
+            '  /model <name> Switch model mid-chat',
+            '  /model?       Show current model',
+            '  /file <path>  Attach file to next message',
+            '  /help         Show commands',
+            '  /exit         Quit',
         ]);
         console.log();
 
         const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout,
-            prompt: 'Ty> ',
+            prompt: 'You> ',
         });
 
         let pendingFiles = [];
@@ -408,14 +406,13 @@ program
             const msg = line.trim();
             if (!msg) { rl.prompt(); return; }
 
-            // ── Komendy wewnętrzne ──
             if (msg === '/exit' || msg === '/quit' || msg === '/q') {
-                console.log('\n👋 Do widzenia!');
+                console.log('\n👋 Bye!');
                 process.exit(0);
             }
             if (msg === '/new') {
                 claude.newConversation();
-                console.log(`\n✅ Nowa konwersacja — model: ${claude.model}\n`);
+                console.log(`\n✅ New conversation started — model: ${claude.model}\n`);
                 rl.prompt();
                 return;
             }
@@ -437,30 +434,29 @@ program
             if (msg.startsWith('/file ')) {
                 const filePath = msg.slice(6).trim();
                 if (!fs.existsSync(filePath)) {
-                    console.error(`\n❌ Plik nie istnieje: ${filePath}\n`);
+                    console.error(`\n❌ File not found: ${filePath}\n`);
                 } else {
                     pendingFiles.push(filePath);
-                    console.log(`\n📎 Plik dodany: ${path.basename(filePath)} (zostanie wysłany z następną wiadomością)\n`);
+                    console.log(`\n📎 File queued: ${path.basename(filePath)} (will be sent with next message)\n`);
                 }
                 rl.prompt();
                 return;
             }
             if (msg === '/help') {
-                console.log('\n  Komendy: /new /model <name> /model? /file <path> /exit\n');
+                console.log('\n  Commands: /new /model <name> /model? /file <path> /exit\n');
                 rl.prompt();
                 return;
             }
             if (msg.startsWith('/')) {
-                console.log('\n❓ Nieznana komenda. Wpisz /help\n');
+                console.log('\n❓ Unknown command. Type /help\n');
                 rl.prompt();
                 return;
             }
 
-            // ── Wyślij wiadomość ──
             try {
                 const files = [...pendingFiles];
                 pendingFiles = [];
-                if (files.length) console.log(`📎 Wysyłam z plikami: ${files.map(f => path.basename(f)).join(', ')}`);
+                if (files.length) console.log(`📎 Sending with files: ${files.map(f => path.basename(f)).join(', ')}`);
 
                 process.stdout.write('\nClaude> ');
                 if (options.stream !== false) {
@@ -471,49 +467,50 @@ program
                 }
                 console.log('\n');
             } catch (err) {
-                console.error('\n❌ Błąd:', err.response?.data?.error?.message || err.message, '\n');
+                console.error('\n❌ Error:', err.response?.data?.error?.message || err.message, '\n');
             }
 
             rl.prompt();
         });
 
-        rl.on('close', () => { console.log('\n👋 Do widzenia!'); process.exit(0); });
+        rl.on('close', () => { console.log('\n👋 Bye!'); process.exit(0); });
     });
 
 // ─── install-path ─────────────────────────────────────────────────────────────
 program
     .command('install-path')
-    .description('Show how to add claude-unapi to PATH or use in projects')
+    .description('Show how to install globally or use in projects')
     .action(() => {
         const pkgDir = path.resolve(__dirname, '..');
         const pkgDirUnix = pkgDir.replace(/\\/g, '/');
 
         box([
-            '  Jak zainstalować / dodać do PATH  ',
+            '  Installation & Usage in Projects  ',
             '---',
             '',
-            '  ① Globalnie przez npm (zalecane):',
+            '  ① Global install (recommended):',
             '',
-            `    cd ${pkgDirUnix}`,
-            '    npm install -g .',
+            '    npm install -g github:Wisnia9600/claude-unapi',
             '',
-            '  Potem wpisuj po prostu: claude-unapi <command>',
+            '  Then just run: claude-unapi <command>',
             '',
             '---',
             '',
-            '  ② Lokalnie w projekcie (package.json):',
+            '  ② Local project dependency:',
+            '',
+            '    npm install github:Wisnia9600/claude-unapi',
+            '',
+            '    const Claude = require(\'claude-unapi\');',
+            '',
+            '---',
+            '',
+            '  ③ Local path (offline):',
             '',
             `    "claude-unapi": "file:${pkgDirUnix}"`,
             '',
-            '  Potem: npm install',
-            '',
-            '---',
-            '',
-            '  ③ Alias (bez globalu):',
-            '',
             isWindows()
-                ? `    Set-Alias claude-unapi 'node ${pkgDirUnix}/src/cli.js'`
-                : `    alias claude-unapi='node ${pkgDirUnix}/src/cli.js'`,
+                ? `  Alias: Set-Alias claude-unapi 'node ${pkgDirUnix}/src/cli.js'`
+                : `  Alias: alias claude-unapi='node ${pkgDirUnix}/src/cli.js'`,
             '',
         ]);
     });
@@ -523,27 +520,27 @@ program
     .command('commands')
     .description('Show all available commands with examples')
     .action(() => {
-        console.log('\n📚 Claude Unofficial API — Wszystkie komendy\n');
+        console.log('\n📚 Claude Unofficial API — All Commands\n');
 
         const commands = [
-            ['setup', 'Setup wizard — pierwsze uruchomienie', 'claude-unapi setup'],
-            ['set-key', 'Zapisz token ręcznie', 'claude-unapi set-key sk-ant-oat01-...'],
-            ['config', 'Pokaż / edytuj konfigurację', 'claude-unapi config'],
-            ['config', 'Zmień domyślny model', 'claude-unapi config --set-model haiku'],
-            ['config', 'Ustaw max tokens', 'claude-unapi config --set-max-tokens 4096'],
-            ['config', 'Reset konfiguracji', 'claude-unapi config --reset'],
-            ['models', 'Lista modeli Claude', 'claude-unapi models'],
-            ['test', 'Przetestuj połączenie', 'claude-unapi test'],
-            ['test', 'Test z konkretnym modelem', 'claude-unapi test --model opus'],
-            ['ask', 'Jednorazowe pytanie', 'claude-unapi ask "Napisz helloworld w Python"'],
-            ['ask', 'Z plikiem', 'claude-unapi ask "Co robi ten kod?" -f main.py'],
-            ['ask', 'Z wieloma plikami i modelem', 'claude-unapi ask "Porównaj" -f a.js -f b.js -m opus'],
-            ['ask', 'Bez streamingu', 'claude-unapi ask "..." --no-stream'],
-            ['chat', 'Interaktywny chat', 'claude-unapi chat'],
-            ['chat', 'Chat z wybranym modelem', 'claude-unapi chat --model sonnet'],
-            ['install-path', 'Instrukcja instalacji / PATH', 'claude-unapi install-path'],
-            ['how-to', 'Jak pobrać token z przeglądarki', 'claude-unapi how-to'],
-            ['commands', 'Ta lista', 'claude-unapi commands'],
+            ['setup', 'Interactive setup wizard (start here)', 'claude-unapi setup'],
+            ['set-key', 'Save token directly', 'claude-unapi set-key sk-ant-oat01-...'],
+            ['config', 'Show / edit configuration', 'claude-unapi config'],
+            ['config', 'Set default model', 'claude-unapi config --set-model haiku'],
+            ['config', 'Set max tokens', 'claude-unapi config --set-max-tokens 4096'],
+            ['config', 'Reset config', 'claude-unapi config --reset'],
+            ['models', 'List available Claude models', 'claude-unapi models'],
+            ['test', 'Test connection', 'claude-unapi test'],
+            ['test', 'Test with specific model', 'claude-unapi test --model opus'],
+            ['ask', 'One-shot question', 'claude-unapi ask "Write hello world in Python"'],
+            ['ask', 'With file attachment', 'claude-unapi ask "Explain this code" -f main.py'],
+            ['ask', 'Multiple files + model', 'claude-unapi ask "Compare" -f a.js -f b.js -m opus'],
+            ['ask', 'No streaming', 'claude-unapi ask "..." --no-stream'],
+            ['chat', 'Interactive chat session', 'claude-unapi chat'],
+            ['chat', 'Chat with specific model', 'claude-unapi chat --model sonnet'],
+            ['install-path', 'Show install / project usage instructions', 'claude-unapi install-path'],
+            ['how-to', 'How to get auth token from browser', 'claude-unapi how-to'],
+            ['commands', 'This list', 'claude-unapi commands'],
         ];
 
         let lastCmd = '';
@@ -557,11 +554,11 @@ program
         }
         console.log(`  ${hr('─', 54)}\n`);
 
-        console.log('  Komendy wewnętrzne w trybie chat:');
-        console.log('    /new           Nowa konwersacja');
-        console.log('    /model <name>  Zmień model');
-        console.log('    /file <path>   Załącz plik');
-        console.log('    /exit          Wyjdź z chatu\n');
+        console.log('  In-chat commands (claude-unapi chat):');
+        console.log('    /new           Start new conversation');
+        console.log('    /model <name>  Switch model');
+        console.log('    /file <path>   Attach file to next message');
+        console.log('    /exit          Quit chat\n');
     });
 
 // ─── how-to ───────────────────────────────────────────────────────────────────
@@ -570,27 +567,27 @@ program
     .description('Instructions for getting auth token from browser')
     .action(() => {
         box([
-            '  Jak uzyskać token autoryzacyjny  ',
+            '  How to get your auth token  ',
             '---',
             '',
-            '  ✅ OPCJA 1 — OAuth (zalecane, ważny 1 rok):',
+            '  ✅ OPTION 1 — OAuth (recommended, valid 1 year):',
             '',
             '  1. npm install -g @anthropic-ai/claude-code',
             '  2. claude setup-token',
-            '  3. Skopiuj token (sk-ant-oat01-...)',
+            '  3. Copy token (sk-ant-oat01-...)',
             '  4. claude-unapi set-key sk-ant-oat01-...',
             '',
             '---',
             '',
-            '  🌐 OPCJA 2 — Session cookie z przeglądarki:',
+            '  🌐 OPTION 2 — Session cookie from browser:',
             '',
-            '  1. Otwórz https://claude.ai (zaloguj się)',
+            '  1. Open https://claude.ai (log in)',
             '  2. F12 → Application → Cookies → claude.ai',
             '     (Firefox: Storage → Cookies)',
-            '  3. Skopiuj: sessionKey (sk-ant-sid01-...)',
+            '  3. Copy: sessionKey (sk-ant-sid01-...)',
             '  4. claude-unapi set-key sk-ant-sid01-...',
             '',
-            '  ⚠️  Nie udostępniaj tokena nikomu!',
+            '  ⚠️  Never share your token with anyone!',
             '',
         ]);
     });
