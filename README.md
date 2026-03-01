@@ -1,159 +1,144 @@
 # claude-unapi 🤖
 
-Nieoficjalny wrapper pozwalający używać twojego **Claude Pro** w projektach programistycznych — bez płacenia za oficjalne API.
+> Używaj swojej subskrypcji **Claude Pro** w projektach programistycznych — bez płacenia za oficjalny API.
+
+[![GitHub](https://img.shields.io/badge/GitHub-Wisnia9600%2Fclaude--unapi-blue?logo=github)](https://github.com/Wisnia9600/claude-unapi)
+![Node](https://img.shields.io/badge/node-%3E%3D18-green)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 > ⚠️ Projekt nieoficjalny, niezwiązany z Anthropic. Używaj odpowiedzialnie.
 
 ---
 
-## Instalacja
+## Instalacja (1 plik)
 
-```bash
-cd c:\developer\claude-unapi
-npm install
+### Windows (PowerShell)
+```powershell
+irm https://raw.githubusercontent.com/Wisnia9600/claude-unapi/master/get.ps1 | iex
 ```
 
-Opcjonalnie: zainstaluj globalnie dla dostępu do CLI z dowolnego miejsca:
+### Linux / macOS
 ```bash
+curl -fsSL https://raw.githubusercontent.com/Wisnia9600/claude-unapi/master/get.sh | bash
+```
+
+### Ręcznie
+```bash
+git clone https://github.com/Wisnia9600/claude-unapi.git
+cd claude-unapi
+npm install
 npm install -g .
 ```
 
 ---
 
-## Krok 1: Pobierz Session Key z przeglądarki
+## Pierwsze uruchomienie
 
-```
-node src/cli.js how-to
+```bash
+claude-unapi setup
 ```
 
-Lub ręcznie:
-1. Otwórz **[claude.ai](https://claude.ai)** i zaloguj się
-2. Naciśnij **F12** → zakładka **Application** (Chrome/Edge) lub **Storage** (Firefox)
-3. Wybierz **Cookies → https://claude.ai**
-4. Znajdź cookie o nazwie `sessionKey` (wartość zaczyna się od `sk-ant-sid01-`)
-5. Skopiuj wartość
+Kreator przeprowadzi Cię przez:
+1. Ustawienie tokena (OAuth z `claude setup-token` lub cookie z przeglądarki)
+2. Test połączenia
+3. Wybór domyślnego modelu
 
 ---
 
-## Krok 2: Ustaw klucz
+## Komendy
 
-**Opcja A: przez CLI (globalnie, raz na zawsze)**
-```bash
-node src/cli.js set-key sk-ant-sid01-TWÓJ-TOKEN
 ```
-Token zapisuje się do `~/.claude-unapi/config.json`.
-
-**Opcja B: przez `.env` w projekcie**
-```env
-CLAUDE_SESSION_KEY=sk-ant-sid01-TWÓJ-TOKEN
-```
-
-**Opcja C: zmienna środowiskowa**
-```powershell
-$env:CLAUDE_SESSION_KEY = "sk-ant-sid01-TWÓJ-TOKEN"
+claude-unapi setup                    Kreator konfiguracji (zacznij tu)
+claude-unapi config                   Pokaż / edytuj konfigurację
+claude-unapi config --set-model haiku Zmień domyślny model
+claude-unapi models                   Lista dostępnych modeli
+claude-unapi test                     Przetestuj połączenie
+claude-unapi ask "Napisz funkcję..."  Jednorazowe pytanie
+claude-unapi ask "Opisz" -f kod.py    Pytanie z plikiem
+claude-unapi chat                     Interaktywny chat
+claude-unapi commands                 Pełna lista komend
+claude-unapi how-to                   Jak pobrać token
+claude-unapi install-path             Jak używać w projektach
 ```
 
----
-
-## Krok 3: Przetestuj
-
-```bash
-node src/cli.js test
-# ✅ Połączenie działa! Odpowiedź: "działa"
-```
+**Modele (aliasy):** `opus` · `sonnet` (domyślny) · `haiku`
 
 ---
 
 ## Użycie w kodzie
 
-### Podstawowe (czeka na pełną odpowiedź)
-
 ```js
-const Claude = require('c:/developer/claude-unapi');  // lub ścieżka relatywna
+// Instalacja jako zależność - package.json:
+// "claude-unapi": "file:/ścieżka/do/claude-unapi"
+// LUB: "claude-unapi": "github:Wisnia9600/claude-unapi"
 
-const claude = new Claude();
+const Claude = require('claude-unapi');
+const claude = new Claude();                    // czyta token automatycznie
+const claude = new Claude({ model: 'opus' });  // konkretny model
 
-const odpowiedź = await claude.sendMessage('Napisz funkcję sumującą tablicę liczb w JS');
-console.log(odpowiedź);
-```
+// Podstawowe wysyłanie
+const odpowiedź = await claude.sendMessage('Napisz funkcję w JS...');
 
-### Streaming (odpowiedź pojawia się na bieżąco)
+// Streaming
+await claude.streamMessage('Opisz X', chunk => process.stdout.write(chunk));
 
-```js
-const Claude = require('c:/developer/claude-unapi');
-const claude = new Claude();
+// Z plikiem (kod, PDF, obrazy)
+await claude.sendMessage('Co robi ten kod?', { files: ['./main.py'] });
+await claude.sendMessage('Podsumuj', { files: ['raport.pdf'], model: 'opus' });
 
-await claude.streamMessage(
-  'Napisz prostą aplikację Flask w Pythonie',
-  (chunk) => process.stdout.write(chunk)  // callback na każdy fragment
-);
-```
+// Wiele plików
+await claude.sendMessage('Porównaj', { files: ['a.js', 'b.js'] });
 
-### Konwersacja wieloturowa (kontekst)
-
-```js
-const Claude = require('c:/developer/claude-unapi');
-const claude = new Claude();
-
-await claude.sendMessage('Mam tablicę: [1, 2, 3, 4, 5]');
-const odpowiedź = await claude.sendMessage('Oblicz jej sumę');
-// Claude pamięta kontekst z poprzedniej wiadomości
-```
-
-### Nowa konwersacja (reset kontekstu)
-
-```js
+// Nowa konwersacja (reset kontekstu)
 claude.newConversation();
-await claude.sendMessage('Start od nowa');
 ```
 
-### Ręczne podanie session key (bez konfiguracji)
-
-```js
-const Claude = require('c:/developer/claude-unapi');
-const claude = new Claude({ sessionKey: 'sk-ant-sid01-...' });
-```
-
----
-
-## CLI
+### Użycie przez GitHub
 
 ```bash
-node src/cli.js set-key <token>   # zapisz session key
-node src/cli.js show-key          # pokaż zapisany klucz (zamaskowany)
-node src/cli.js test              # przetestuj połączenie
-node src/cli.js chat              # interaktywny chat w terminalu
-node src/cli.js how-to            # instrukcja pobierania session key
+npm install github:Wisnia9600/claude-unapi
 ```
 
----
-
-## Użycie w innym projekcie
-
-Dodaj do `package.json` w projekcie:
-
-```json
-{
-  "dependencies": {
-    "claude-unapi": "file:c:/developer/claude-unapi"
-  }
-}
-```
-
-Następnie:
-```bash
-npm install
-```
-
-Teraz możesz normalnie robić:
 ```js
 const Claude = require('claude-unapi');
 ```
 
 ---
 
-## Uwagi
+## Token autoryzacyjny
 
-- Session key wygasa po czasie — jeśli dostaniesz błąd 401, pobierz nowy z przeglądarki
-- Biblioteka używa endpointów claude.ai — może przestać działać po aktualizacjach strony
-- Nie udostępniaj nikomu swojego session key
+**Opcja 1 — OAuth (zalecane, ważny 1 rok):**
+```bash
+claude setup-token          # generuje sk-ant-oat01-...
+claude-unapi set-key sk-ant-oat01-...
+```
+
+**Opcja 2 — Session cookie z przeglądarki:**
+```
+Claude-unapi how-to         # pełna instrukcja
+```
+
+**Przez .env w projekcie:**
+```env
+CLAUDE_CODE_OAUTH_TOKEN=sk-ant-oat01-...
+```
+
+---
+
+## Obsługiwane pliki
+
+| Typ | Format |
+|-----|--------|
+| Obrazy | JPEG, PNG, GIF, WEBP (base64) |
+| Dokumenty | PDF (base64) |
+| Kod/tekst | .py .js .ts .go .rs .cpp .java .json .csv .md (inline) |
+
+---
+
+## Czat w terminalu — komendy
+
+W trybie `claude-unapi chat`:
+- `/new` — nowa konwersacja
+- `/model opus` — zmiana modelu w locie
+- `/file ./kod.py` — wyślij plik z kolejną wiadomością
+- `/exit` — wyjście
