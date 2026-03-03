@@ -186,4 +186,4 @@ This project was **entirely designed and built by AI** — specifically by [Gemi
 
 The human contributor provided the initial idea and approved decisions along the way.
 
-*Yes, im am very lazy*
+*Yes, i am very lazy*
