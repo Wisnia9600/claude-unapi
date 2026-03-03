@@ -185,3 +185,5 @@ Token is resolved in this order:
 This project was **entirely designed and built by AI** — specifically by [Gemini](https://deepmind.google/technologies/gemini/) running as an autonomous coding agent ([Antigravity](https://antigravity.dev/)). From architecture decisions and HTTP client implementation to CLI design, GitHub publishing, and one-click installers — every file in this repository was written by AI in a single session.
 
 The human contributor provided the initial idea and approved decisions along the way.
+
+*Yes, im am very lazy*
